@@ -1,8 +1,10 @@
-import { View, Text, Image, TouchableOpacity, Pressable } from 'react-native'
+import { View, Text, Image, TouchableOpacity, Pressable, Alert } from 'react-native'
 import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as ImagePicker from "expo-image-picker"
-import { Client } from "@gradio/client";
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import { useMutation } from '@tanstack/react-query'
+import { generateImage } from '@/services/api'
 
 const index = () => {
 
@@ -17,8 +19,6 @@ const index = () => {
             quality: 1,
         });
       
-        console.log(result);
-      
         if (!result.canceled) {
             setSelfImage(result.assets[0].uri);
         } 
@@ -32,32 +32,67 @@ const index = () => {
             quality: 1,
         });
       
-        console.log(result);
-      
         if (!result.canceled) {
             setModelImage(result.assets[0].uri);
         } 
     }
 
+    const { mutate, isPending } = useMutation({
+        mutationKey: [ "generateImage" ],
+        mutationFn: generateImage,
+        onSuccess: (data) => {
+            Alert.alert("Request Success", JSON.stringify(data))
+        },
+        onError: (error) => {
+            Alert.alert("Request Error", JSON.stringify(error))
+        }
+    });
 
-    const generateImage = async () => {
+    const submitImages = async () => {
         try{
-            const response_0 = await fetch("https://raw.githubusercontent.com/gradio-app/gradio/main/test/test_files/bus.png");
-            const exampleImage = await response_0.blob();
-                                    
-            const app = await Client.connect("yisol/IDM-VTON");
-            const result = await app.predict("/tryon", [		
-                {"background": exampleImage,"layers":[],"composite":null}, // undefined  in 'Human. Mask with pen or use auto-masking' Imageeditor component
-                exampleImage, 	// blob in 'Garment' Image component		
-                "Hello!!", // string  in 'parameter_17' Textbox component		
-                true, // boolean  in 'Yes' Checkbox component		
-                true, // boolean  in 'Yes' Checkbox component		
-                3, // number  in 'Denoising Steps' Number component		
-                3, // number  in 'Seed' Number component
-            ]);
-            console.log(result.data);
+
+            if (!selfImage || !modelImage) {
+                return Alert.alert("Image is Required", "Please upload both the images");
+            }
+
+
+            const formData = new FormData();
+
+            const fetchBlob = async (uri: string) => {
+                const res = await fetch(uri);
+                return res.blob();
+            }
+
+            const selfImageBlob = await fetchBlob(selfImage);
+            const modelImageBlob = await fetchBlob(modelImage);
+    
+            formData.append("selfImage", selfImageBlob, "selfImage.jpg");
+
+            formData.append("modelImage", modelImageBlob, "modelImage.jpg");
+
+            // const response = await axios.post(
+            // "http://localhost:5000/api/tryon",
+            // formData,
+            // {
+            //     headers: { "Content-Type": "multipart/form-data" },
+            // }
+            // );
+
+            // const response = await axios({
+            //     url: "http://localhost:5000/api/tryon",
+            //     method: "post",
+            //     headers: { "Content-Type": "multipart/form-data" },
+            //     data: formData
+            // })
+
+            // if(response.status === 200){
+
+            // }
+
+            mutate({ formData });
+
         }catch(error){
-            console.log(error)
+            console.log(JSON.stringify(error))
         }
     }
 
@@ -76,13 +111,17 @@ const index = () => {
                     {selfImage ? (
                         <Image className="h-full w-full rounded-md" source={{ uri: selfImage }} />
                     ) : (
-                        <Text>Select File</Text>
+
+                        <View className='flex justify-center items-center gap-8'>
+                            <MaterialCommunityIcons name="file-image-plus-outline" size={36} color="#9333ea" />
+                            <Text className='text-purple-600 font-semibold'>Upload your picture</Text>
+                        </View>
                     )}
                 </TouchableOpacity>
             </View>
 
             {/* Try On Button */}
-            <Pressable onPress={generateImage} className="bg-purple-500 rounded-lg active:bg-purple-400/80 transition-all duration-150">
+            <Pressable disabled={!selfImage || !modelImage || isPending} onPress={submitImages} className="bg-purple-500 rounded-lg active:bg-purple-400/80 transition-all duration-150 disabled:bg-purple-300">
                 <Text className="mx-auto text-white font-albert-sans py-3 font-semibold text-xl">Try On</Text>
             </Pressable>
 
@@ -95,7 +134,10 @@ const index = () => {
                     {modelImage ? (
                         <Image className="h-full w-full rounded-md" source={{ uri: modelImage }} />
                     ) : (
-                        <Text>Select File</Text>
+                        <View className='flex justify-center items-center gap-8'>
+                            <MaterialCommunityIcons name="file-image-plus-outline" size={36} color="#9333ea" />
+                            <Text className='text-purple-600 font-semibold'>Upload the picture of the outfit you wanna try</Text>
+                        </View>
                     )}
                 </TouchableOpacity>
             </View>
