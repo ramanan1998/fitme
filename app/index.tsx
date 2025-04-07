@@ -70,25 +70,6 @@ const index = () => {
 
             formData.append("modelImage", modelImageBlob, "modelImage.jpg");
 
-            // const response = await axios.post(
-            // "http://localhost:5000/api/tryon",
-            // formData,
-            // {
-            //     headers: { "Content-Type": "multipart/form-data" },
-            // }
-            // );
-
-            // const response = await axios({
-            //     url: "http://localhost:5000/api/tryon",
-            //     method: "post",
-            //     headers: { "Content-Type": "multipart/form-data" },
-            //     data: formData
-            // })
-
-            // if(response.status === 200){
-
-            // }
-
             mutate({ formData });
 
         }catch(error){
